@@ -5,9 +5,9 @@ import { ROUTES } from "src/utils/constants/routes";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const links = [
-    { name: "Complaint Intake", path: ROUTES.COMPLAINT_INTAKE, icon: ClipboardList, end: true },
+    { name: "Home", path: ROUTES.HOME, icon: HomeIcon, end: true },
+    { name: "Complaint Intake", path: ROUTES.COMPLAINT_INTAKE, icon: ClipboardList },
     { name: "Dashboard", path: ROUTES.DASHBOARD, icon: LayoutDashboard },
-    { name: "Home", path: ROUTES.HOME, icon: HomeIcon },
   ];
 
   const sidebarClasses = `fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white pt-16 transition-transform lg:static lg:translate-x-0 lg:pt-0 ${
@@ -44,14 +44,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                 end={link.end}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  `flex items-center gap-3 py-2.5 text-sm font-bold border-l-4 transition-all duration-200 ease-out ${
                     isActive
-                      ? "bg-sky-50 text-primary"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-sky-50 text-primary border-primary pl-4 rounded-r-xl font-extrabold shadow-2xs"
+                      : "text-gray-600 border-transparent hover:bg-slate-50 hover:text-gray-950 hover:pl-4 pl-3"
                   }`
                 }
               >
-                <Icon className="h-5 w-5 flex-shrink-0" />
+                <Icon className="h-4 w-4 flex-shrink-0" />
                 <span>{link.name}</span>
               </NavLink>
             );

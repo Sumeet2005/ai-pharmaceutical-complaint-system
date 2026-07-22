@@ -11,24 +11,22 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(
-  (config) => {
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (config) => config,
+  (error) => Promise.reject(error)
 );
 
 apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     const errorDetails = {
-      message: error.response?.data?.message || error.message || "An unexpected error occurred",
+      message:
+        error.response?.data?.message ||
+        error.message ||
+        "An unexpected error occurred",
       status: error.response?.status,
       data: error.response?.data,
     };
+
     return Promise.reject(errorDetails);
   }
 );

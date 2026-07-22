@@ -1,5 +1,7 @@
 export const ROUTES = {
-  COMPLAINT_INTAKE: "/",
-  DASHBOARD: "/dashboard",
+  LANDING: "/",
   HOME: "/home",
+  COMPLAINT_INTAKE: "/complaint",
+  DASHBOARD: "/dashboard",
+  COMPLAINT_DETAILS: "/complaint/:id",
 };

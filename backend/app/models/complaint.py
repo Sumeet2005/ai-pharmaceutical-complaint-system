@@ -55,6 +55,95 @@ class Complaint(Base):
         nullable=False,
     )
 
+    product_strength: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    customer_organization: Mapped[str] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    customer_contact: Mapped[str] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    complaint_source: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    dosage_form: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    manufacturing_date: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    expiry_date: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    quantity_affected: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    complaint_category: Mapped[str] = mapped_column(
+        String(150),
+        nullable=True,
+    )
+
+    complaint_date: Mapped[str] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    requested_action: Mapped[str] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    ai_risk_level: Mapped[str] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    priority: Mapped[str] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    ai_summary: Mapped[str] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    is_duplicate: Mapped[bool] = mapped_column(
+        nullable=True,
+        default=False,
+    )
+
+    duplicate_matched_id: Mapped[str] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    duplicate_similarity: Mapped[float] = mapped_column(
+        nullable=True,
+    )
+
+    duplicate_reasoning: Mapped[str] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
