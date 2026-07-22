@@ -4,6 +4,54 @@ PharmacoGuard is a production-grade, AI-driven Quality Management System (QMS) d
 
 ---
 
+## 📌 Table of Contents
+
+- [Project Overview](#project-overview)
+- [Features](#-features)
+- [Technology Stack](#-technology-stack)
+- [System Architecture](#%EF%B8%8F-system-architecture--workflow-orchestration)
+- [AI Workflow](#-ai-workflow)
+- [Folder Structure](#%EF%B8%8F-folder-structure)
+- [Installation](#%EF%B8%8F-setup--installation-instructions)
+- [Environment Configuration](#%EF%B8%8F-environment-configuration)
+- [Running the Application](#-running-the-application)
+- [API Documentation](#-api-documentation)
+- [Screenshots](#-screenshots)
+- [Future Improvements](#-future-improvements)
+- [License](#license)
+
+---
+
+## 🔍 Project Overview
+
+PharmacoGuard provides a unified workspace for QA Teams to ingest, analyze, and catalog product quality incidents. By automating unstructured narrative parsing using LLMs orchestrated through LangGraph, the system enforces a strict data extraction standard, detects redundant filings semantically, and minimizes manual transcription labor while maintaining compliance records.
+
+---
+
+## ✅ Features
+
+- [x] AI-powered Complaint Ingestion
+- [x] PDF Upload
+- [x] DOCX Upload
+- [x] TXT Upload
+- [x] EML Upload
+- [x] Plain Text Complaint Processing
+- [x] AI Field Extraction
+- [x] AI Complaint Summary
+- [x] AI Risk Classification
+- [x] Initial QA Priority
+- [x] Conversational QA AI Copilot
+- [x] LangGraph Workflow Orchestration
+- [x] Semantic Duplicate Detection
+- [x] PostgreSQL Complaint Ledger
+- [x] Dashboard
+- [x] Complaint Details
+- [x] Search & Filtering
+- [x] Delete Workflow
+- [x] Responsive Enterprise UI
+
+---
+
 ## 🛠️ Technology Stack
 
 * **Frontend**: React (Vite environment), Redux Toolkit (state management), Tailwind CSS (styling), Lucide React (icons), React Router.
@@ -37,26 +85,72 @@ graph TD
 
 ---
 
-## 🌟 Key Features
+## 🧠 AI Workflow
 
-1. **Intelligent Ingestion Pipeline**:
-   * Accepts document uploads (`.pdf`, `.docx`, `.txt`, `.eml`) or long-text pastes.
-   * Auto-routes inputs: files invoke the file ingestion pipeline; text pastes bypass client checks and route directly to the FastAPI text extraction endpoint.
-2. **QMS Ledger Intake Form**:
-   * Organized into four distinct compliance sections:
-     * *Section 1: Origin & Customer Information*
-     * *Section 2: Product & Batch Identification*
-     * *Section 3: Complaint Details*
-     * *Section 4: AI Initial Assessment* (Risk Level, Priority, and AI Narrative Summary).
-3. **Conversational QA AI Copilot**:
-   * ChatGPT-style chat input with vertically centered components.
-   * Local Command Parsing: Natural language commands (e.g., *"Change Expiry Date to November 2027"*) are parsed locally to update the form fields immediately.
-   * General Q&A: Conversational queries are routed to Groq to extract root cause analyses or corrective actions (CAPA).
-4. **Operations Dashboard & Audit Log**:
-   * Dynamic stats (Total, Pending, Reviewed, Critical, High Severity).
-   * Responsive search bar and severity/status filter dropdowns.
-   * Incident Details page rendering full timelines, UUIDs, metadata, and triage audit histories.
-   * Safe DELETE modal endpoints with success indicators.
+The ingestion pipeline moves data through the system step-by-step to compile a validated incident:
+
+```
+User Upload (File/Text)
+       ↓
+    FastAPI
+       ↓
+   LangGraph
+       ↓
+  Extract Complaint Fields
+       ↓
+  Generate AI Summary
+       ↓
+  Risk Classification
+       ↓
+  Priority Assignment
+       ↓
+  Duplicate Detection
+       ↓
+  PostgreSQL Ingestion
+       ↓
+  React Dashboard
+```
+
+### LangGraph Node Definitions
+1. **Extract Complaint Fields Node**: Invokes the Groq LLM using custom prompts to map unstructured documents into 14 compliant QMS schema variables.
+2. **Generate AI Summary Node**: Takes extracted entities and parses the localized brief explanation record.
+3. **Classify Risk Node**: Assesses the severity of the quality event and maps the incident risk level.
+4. **Priority Assignment Node**: Translates severity and risk conditions into priority rankings (High/Medium/Low).
+5. **Duplicate Detection Node**: Connects to the database to run semantic matches using product names, batch IDs, categories, and description embeddings. If matches are found, it logs duplicate metadata and redirects the record state.
+
+---
+
+## 📂 Folder Structure
+
+```
+ai-pharmaceutical-complaint-system/
+│
+├── backend/
+│   ├── app/
+│   │   ├── ai/
+│   │   ├── api/
+│   │   ├── database/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   └── services/
+│   ├── migrations/
+│   ├── alembic.ini
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   └── store/
+│   ├── index.html
+│   └── package.json
+│
+├── README.md
+└── requirements.txt
+```
 
 ---
 
@@ -117,14 +211,63 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🧪 Validation & Linting
+## 🔌 API Documentation
 
-Verify code quality and clean builds with the following scripts:
+FastAPI automatically generates interactive schema API documents:
 
-```bash
-# Run ESLint validation checks
-npm run lint
+* **Swagger UI Docs**: Available locally at [http://localhost:8000/docs](http://localhost:8000/docs)
+* **ReDoc API Docs**: Available locally at [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-# Verify production Vite build stability
-npm run build
-```
+### Primary API REST Endpoints
+
+| HTTP Method | Endpoint Path | Description |
+| :--- | :--- | :--- |
+| **POST** | `/api/v1/upload/file` | Ingests binary files (`.pdf`, `.docx`, `.msg`) for parsing. |
+| **POST** | `/api/v1/upload/text` | Ingests raw text payloads directly into the pipeline. |
+| **POST** | `/api/v1/upload/chat` | Feeds conversational prompt lines into the Groq Copilot. |
+| **GET** | `/api/v1/complaints` | Queries the entire compliance ledger list. |
+| **GET** | `/api/v1/complaints/{id}` | Retrieves detail metrics for a single complaint UUID. |
+| **PATCH** | `/api/v1/complaints/{id}` | Updates specific attributes of a complaint record. |
+| **DELETE** | `/api/v1/complaints/{id}` | Deletes a complaint record from the system registry. |
+
+---
+
+## 📸 Screenshots
+
+I will replace these placeholders with screenshots later.
+
+### Landing Page
+*(Add Screenshot)*
+
+### Complaint Intake Workspace
+*(Add Screenshot)*
+
+### AI Copilot
+*(Add Screenshot)*
+
+### Dashboard
+*(Add Screenshot)*
+
+### Complaint Details
+*(Add Screenshot)*
+
+### Duplicate Detection
+*(Add Screenshot)*
+
+---
+
+## 🔮 Future Improvements
+
+- **OCR for Scanned PDFs**: Integrate Tesseract OCR or Vision LLMs to extract text from scanned quality reports.
+- **Email Inbox Integration**: Establish automatic IMAP listeners to ingest client complaints directly from mailbox support addresses.
+- **SAP QMS Integration**: Build downstream ERP/SAP system integrations to synchronize committed entries automatically.
+- **Multi-language Ingestion**: Incorporate translation modules to triage feedback in non-English formats.
+- **Human-in-the-Loop Review**: Add multi-stage verification steps requiring secondary QA signatures for high-risk files.
+- **Advanced Trend Analytics**: Include visualizations indicating batch defect rates, regional incidents, and timeline correlations.
+- **Role-Based Authentication**: Introduce OAuth2 security protocols specifying QA Triage, QA Officer, and Compliance Admin roles.
+
+---
+
+## License
+
+Developed as part of the AIVOA Full Stack Developer Assessment.
