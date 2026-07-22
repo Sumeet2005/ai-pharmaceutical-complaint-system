@@ -234,25 +234,25 @@ FastAPI automatically generates interactive schema API documents:
 
 ## 📸 Screenshots
 
-I will replace these placeholders with screenshots later.
+### 🏠 Landing Page
 
-### Landing Page
-*(Add Screenshot)*
+![Landing Page](docs/images/landing-page.png)
 
-### Complaint Intake Workspace
-*(Add Screenshot)*
+### 📄 Complaint Intake Workspace
 
-### AI Copilot
-*(Add Screenshot)*
+![Complaint Intake](docs/images/complaint-intake.png)
 
-### Dashboard
-*(Add Screenshot)*
+### 📊 Dashboard
 
-### Complaint Details
-*(Add Screenshot)*
+![Dashboard](docs/images/dashboard.png)
 
-### Duplicate Detection
-*(Add Screenshot)*
+### 🔍 Duplicate Detection
+
+![Duplicate Detection](docs/images/duplicate-detection.png)
+
+### ✅ Duplicate Review Workflow
+
+![Duplicate Review](docs/images/duplicate-review.png)
 
 ---
 
