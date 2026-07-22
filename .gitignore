@@ -1,34 +1,20 @@
-# Python
+# Virtual environment
 .venv/
+
+# Environment variables
+.env
+
+# Python cache
 __pycache__/
 *.pyc
 
-# Environment
-.env
-.env.*
-
-!.env.example
-
-# Node
-frontend/node_modules/
-
-# Build
-frontend/dist/
-backend/dist/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
+# Uploaded files
+app/uploads/*
+!app/uploads/.gitkeep
 
 # Logs
 *.log
 
-# Python cache
-.pytest_cache/
-
-# Alembic cache
-backend/alembic/versions/__pycache__/
+# IDE
+.vscode/
+.idea/
