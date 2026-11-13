@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import UploadFile
 
 
-UPLOAD_DIR = Path("app/uploads")
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 

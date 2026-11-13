@@ -1,0 +1,6 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Ensure requirements files are treated as text
+requirements.txt text diff
+backend/requirements.txt text diff

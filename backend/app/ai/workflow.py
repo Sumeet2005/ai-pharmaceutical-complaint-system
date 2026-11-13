@@ -144,6 +144,7 @@ def duplicate_detection_node(state: ComplaintState) -> dict:
         product_name=extracted_data.get("product_name"),
         batch_number=extracted_data.get("batch_number"),
         complaint_category=extracted_data.get("complaint_category"),
+        ai_summary=complaint_create.ai_summary,
     )
     is_duplicate = duplicate_res.get("duplicate", False)
 
