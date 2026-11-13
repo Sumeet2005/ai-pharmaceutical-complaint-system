@@ -12,15 +12,15 @@
 
 ---
 
-## ⚡ Executive Summary (Recruiter & Interviewer Overview)
+## Project Overview
 
 **PharmacoGuard** is a full-stack Quality Assurance (QA) ingestion workspace that streamlines how pharmaceutical quality complaints are captured, triaged, and reviewed. When unstructured documents (customer letters, distributor emails, laboratory reports) arrive, the platform validates their medical relevance, parses 14 standardized QMS fields using a 5-node LangGraph workflow on Groq (`openai/gpt-oss-120b`), flags potential batch duplicates using multi-representation sentence embeddings (`all-MiniLM-L6-v2`), and presents the data in an interactive two-panel React 19 workspace for human review prior to ledger persistence.
 
-### Quick Architectural Snapshot
-* **Frontend**: React 19, Vite 8, Tailwind CSS 4, Redux Toolkit (dashboard registry), local component state (intake form and chat).
+### Architectural Snapshot
+* **Frontend**: React 19, Vite 8, Tailwind CSS 4, Redux Toolkit (dashboard complaints registry), local component state (intake form and Copilot chat).
 * **Backend**: Python (verified on 3.13.7 / 3.11+), FastAPI, SQLAlchemy 2.0 ORM, Alembic migrations, Uvicorn ASGI server.
 * **AI & NLP**: LangGraph (5-node linear state graph), Groq Inference API (`openai/gpt-oss-120b`), Sentence Transformers (`all-MiniLM-L6-v2` 384-dimensional dense embeddings), Scikit-Learn (cosine similarity).
-* **Database**: PostgreSQL 17 (relational persistence, sequential `CMP-YYYYMMDD-XXXX` IDs, practically unique UUID primary keys).
+* **Database**: PostgreSQL 17 (relational persistence, sequential `CMP-YYYYMMDD-XXXX` IDs, UUID primary keys).
 
 ```mermaid
 flowchart LR
@@ -47,7 +47,7 @@ flowchart LR
 
 ## 📌 Table of Contents
 
-1. [Project Overview & Business Problem](#1-project-overview--business-problem)
+1. [Project Background & Business Problem](#1-project-background--business-problem)
 2. [Key Features](#2-key-features)
 3. [System Architecture](#3-system-architecture)
 4. [End-to-End Document Processing Pipeline](#4-end-to-end-document-processing-pipeline)
@@ -59,33 +59,32 @@ flowchart LR
 10. [API Documentation](#10-api-documentation)
 11. [Repository Structure](#11-repository-structure)
 12. [Local Setup & Execution Guide](#12-local-setup--execution-guide)
-13. [Manual Testing & Interview Walkthrough](#13-manual-testing--interview-walkthrough)
+13. [Manual Testing & Verification Guide](#13-manual-testing--verification-guide)
 14. [Automated & Regression Testing](#14-automated--regression-testing)
 15. [Security, Limitations & Future Roadmap](#15-security-limitations--future-roadmap)
-16. [Technical Interview Cheatsheet](#16-technical-interview-cheatsheet)
 
 ---
 
-## 1. Project Overview & Business Problem
+## 1. Project Background & Business Problem
 
 ### The Business Challenge
-In pharmaceutical operations, product quality complaints arrive continuously from hospitals, retail pharmacies, and distributors via unstructured narratives. Examples include:
-* **Foreign Particles**: Black specks, hair, or glass embedded in tablets or ampoules.
-* **Packaging Integrity**: Defective blister strip seals, leaking bottles, damaged crimp seals.
-* **Physical Defects**: Cracked cores, capping, discoloration, or sedimentation.
-* **Labeling / Traceability**: Mismatched batch codes between cartons and primary packaging.
+In pharmaceutical manufacturing and distribution operations, product quality complaints arrive continuously from hospitals, retail pharmacies, and distributors via unstructured narratives. Examples include:
+* **Foreign Particles**: Black specks, fibers, or particulate matter embedded in tablets, suspensions, or ampoules.
+* **Packaging Integrity**: Defective blister strip seals, leaking liquid bottles, damaged crimp seals.
+* **Physical Defects**: Cracked tablet cores, capping, discoloration, or unexpected precipitation.
+* **Labeling / Traceability**: Mismatched batch codes between secondary cartons and primary blister strips.
 
 ### Operational Pain Points
-1. **Manual Data Entry**: QA specialists spend 20–30 minutes per incident extracting up to 14 discrete data fields into an electronic QMS.
+1. **Manual Data Entry Overhead**: QA specialists manually transcribe up to 14 discrete data fields from unstructured correspondence into electronic QMS forms, introducing operational delays during high-volume intake.
 2. **Batch Blindspots**: When different pharmacies report identical packaging defects using varied vocabulary, manual triage often fails to correlate them, missing batch-wide quality signals.
-3. **Inconsistent Triage**: Different reviewers assign divergent risk levels to comparable defects.
+3. **Inconsistent Triage**: Different reviewers assign divergent risk levels to comparable defects without standardized scoring rules.
 
 ### The PharmacoGuard Solution
 PharmacoGuard automates document classification, structured extraction, and semantic duplicate detection while strictly preserving human verification:
 * Documents are automatically checked for relevance before entering processing.
 * 14 standard QMS fields are extracted into an interactive form.
 * Potential duplicates are identified and surfaced with similarity scores and comparative metadata.
-* Complaints are initially recorded in the database with `Pending` status (or `Duplicate` if flagged during triage); a human reviewer verifies or edits the data before committing the record to `Reviewed` status.
+* Complaints are initially recorded in PostgreSQL with `Pending` status (or `Duplicate` if flagged during triage); a human reviewer verifies or edits the data before committing the record to `Reviewed` status.
 
 *(Disclaimer: PharmacoGuard is an engineering prototype and portfolio demonstration. It is not certified for FDA 21 CFR Part 11 or EU GMP Annex 11 compliance).*
 
@@ -98,15 +97,11 @@ PharmacoGuard automates document classification, structured extraction, and sema
 3. **Direct Text Ingestion**: Dedicated endpoint and UI paste area for email bodies or call transcripts without file creation.
 4. **Binary Relevance Classification**: LLM-based gatekeeper that rejects non-complaint documents (e.g., invoices, resumes, manuals) before workflow execution.
 5. **Structured 14-Field QMS Extraction**: Extracts product name, strength, dosage form, batch number, manufacturing date, expiry date, affected quantity, complaint category, severity, complainant name, organization, contact, source, and requested action.
-6. **AI Complaint Summarization**: Generates a standardized 2-to-3 sentence executive summary.
-7. **Risk & Priority Mapping**: Standardizes risk (`Critical`, `High`, `Medium`, `Low`) and operational priority (`High`, `Medium`, `Low`).
-8. **Multi-Representation Semantic Duplicate Detection**: Embeds both narrative text and AI summary to compute cosine similarity, applying dynamic thresholds (70% for batch matches, 85% otherwise).
-9. **Interactive QA AI Copilot**: Context-grounded assistant answering questions strictly using the uploaded narrative.
-10. **Natural-Language Form Corrections**: Client-side regex intent parser that intercepts commands (e.g., *"change batch number to B-99"*) to update and highlight form fields.
-11. **Human-in-the-Loop Verification**: Requires manual confirmation to transition complaints from `Pending` to `Reviewed`.
-12. **PostgreSQL Complaint Ledger**: Stores records with sequential `CMP-YYYYMMDD-XXXX` IDs, practically unique UUID primary keys, and audit fields.
-13. **Operational Dashboard**: Aggregated metrics, status filtering, and client-side substring search across complaint IDs, products, batches, and organizations.
-14. **Case Audit View**: Detailed page displaying complete complaint metadata and timeline.
+6. **Multi-Representation Semantic Duplicate Detection**: Computes dense sentence embeddings (`all-MiniLM-L6-v2`) over both raw narrative and AI summary, catching paraphrased batch issues.
+7. **Interactive Human-in-the-Loop Workspace**: Two-panel React 19 UI featuring side-by-side document/chat viewing, manual form edits, and confidence indicators.
+8. **In-Workspace QA Copilot**: Grounded narrative Q&A alongside client-side regex command parsing for instant form updates.
+9. **Relational Ledger with Human Verification**: Dual-status lifecycle where records start in `Pending` (or `Duplicate`) and require QA sign-off to reach `Reviewed`.
+10. **Operations Dashboard & Audit Trail**: Real-time KPI summary cards, tabular registry with search and status filtering, case drawer inspect, and CSV audit export.
 
 ---
 
@@ -145,7 +140,7 @@ flowchart TD
     UI --> AxiosClient
     DashboardUI --> AxiosClient
     ClientParser --> UI
-    AxiosClient -->|"HTTP POST /process, /text, /chat\nHTTP GET, PATCH, DELETE /complaints"| Router
+    AxiosClient -->|"REST API Calls (/upload, /complaints)"| Router
 
     Router --> UploadSvc
     Router --> ParserSvc
@@ -157,7 +152,7 @@ flowchart TD
 
     AISvc --> Classifier
     Classifier -->|"Relevance Check"| GroqClient
-    AISvc -->|"Invoke graph(state)"| LangGraphWorkflow
+    AISvc -->|"Invoke Graph"| LangGraphWorkflow
     LangGraphWorkflow -->|"Extraction & Summary"| GroqClient
     LangGraphWorkflow -->|"Node 5: Duplicate Audit"| DuplicateSvc
     DuplicateSvc -->|"384-dim Embeddings"| EmbeddingSvc
@@ -167,10 +162,11 @@ flowchart TD
 ```
 
 ### Architectural Details
-
-* **Frontend State Separation**: Dashboard metrics and complaint lists use Redux Toolkit ([dashboardSlice.js](frontend/src/store/dashboardSlice.js)), whereas active complaint form values and Copilot chat logs are managed locally in component state ([Complaint.jsx](frontend/src/pages/Complaint.jsx)) to maintain responsive form editing.
-* **Upload Isolation**: Files are written to `backend/app/uploads/` using `uuid4()` names to prevent path traversal and overwrites.
-* **Database Session Lifecycle**: Handled via FastAPI's dependency injection (`Depends(get_db)`), ensuring connections return to the pool after request completion.
+* **Client-Server Boundary**: React 19 client and FastAPI backend communicate strictly over asynchronous JSON HTTP APIs. In local development, Vite proxies `/api` requests to `127.0.0.1:8000`.
+* **Frontend State Segregation**:
+  * **Operations Dashboard**: Uses Redux Toolkit (`complaintSlice`) to manage the complaint registry list, loading state, search query, and status filters.
+  * **Active Ingestion Workspace**: Uses local React component state (`useState`) in `Complaint.jsx` for form values, validation flags, upload status, and Copilot chat session history.
+* **Local Disk Storage**: Uploaded binary files are saved to `backend/app/uploads/` using UUID4 filenames to prevent directory collisions and retain source files for inspection.
 
 ---
 
@@ -192,7 +188,7 @@ sequenceDiagram
     QA->>Client: Selects file (.pdf, .docx, .msg)
     Client->>Client: Client-side validation (extension, size <= 10MB)
     Client->>API: POST /api/v1/upload/process (multipart/form-data)
-    Note over Client: Simulated progress bar activates
+    Note over Client: Simulated progress timer activates
     API->>Storage: Save file as {uuid4}.{ext}
     API->>Parser: Extract normalized text
     Parser-->>API: Extracted plain text
@@ -234,7 +230,7 @@ sequenceDiagram
     end
 ```
 
-*(Note: The upload progress bar in `Complaint.jsx` is timer-simulated while waiting for the single asynchronous `POST /api/v1/upload/process` HTTP request to complete).*
+*(Note: The upload progress bar in `Complaint.jsx` is an animated client-side timer while awaiting the single asynchronous `/process` HTTP response; it is not a chunked SSE or WebSocket byte-stream).*
 
 ---
 
@@ -313,19 +309,19 @@ flowchart TD
         SimSummary --> MaxScore
     end
 
-    MatchProd -->|Yes/No| EvalThreshold{"Product & Batch Both Match?"}
-    MatchBatch -->|Yes/No| EvalThreshold
-    MatchCat -->|Diagnostic Info| Reasoning["Record Category Match in Audit Reasoning\n(Does not alter threshold)"]
+    MatchProd -->|"Candidate Comparison"| EvalThreshold{"Product & Batch Both Match?"}
+    MatchBatch -->|"Candidate Comparison"| EvalThreshold
+    MatchCat -->|"Diagnostic Context"| Reasoning["Record Category Match in Audit Log\n(Diagnostic info - does not alter threshold)"]
 
-    EvalThreshold -->|Yes (Exact Batch Match)| Thresh70["Applied Threshold = 0.70 (70%)"]
-    EvalThreshold -->|No (Cross-Batch / Default)| Thresh85["Applied Threshold = 0.85 (85%)"]
+    EvalThreshold -->|"Yes: Exact Batch Match"| Thresh70["Applied Threshold = 0.70 (70%)"]
+    EvalThreshold -->|"No: Cross-Batch or Default"| Thresh85["Applied Threshold = 0.85 (85%)"]
 
     MaxScore --> Compare{"sim_score >= Applied Threshold?"}
     Thresh70 --> Compare
     Thresh85 --> Compare
 
-    Compare -->|Yes| FlagDuplicate["Flag Potential Duplicate\n(is_duplicate = True, record matched ID & score)"]
-    Compare -->|No| FlagUnique["Mark as Unique\n(is_duplicate = False)"]
+    Compare -->|"Yes: Exceeds Threshold"| FlagDuplicate["Flag Potential Duplicate\n(is_duplicate = True, record matched ID & score)"]
+    Compare -->|"No: Below Threshold"| FlagUnique["Mark as Unique\n(is_duplicate = False)"]
 ```
 
 ### Engineering Details
@@ -346,15 +342,15 @@ flowchart TD
 flowchart TD
     UserInput["User Enters Message in Copilot Input"] --> CheckMode{"Is Document Ingested & Active?"}
 
-    CheckMode -->|No (Idle Workspace)| TextIngest["Trigger Direct Text Ingestion\nPOST /api/v1/upload/text"]
+    CheckMode -->|"No: Idle Workspace"| TextIngest["Trigger Direct Text Ingestion\nPOST /api/v1/upload/text"]
 
-    CheckMode -->|Yes (Active Document)| ParseIntent["Client-Side Intent Parser\n(conversationalParser.js)"]
+    CheckMode -->|"Yes: Active Document"| ParseIntent["Client-Side Intent Parser\n(conversationalParser.js)"]
 
-    ParseIntent --> RegexMatch{"Matches Command Verbs?\n('change batch to X', 'set severity to High')"}
+    ParseIntent --> RegexMatch{"Matches Mutation Commands?\ne.g., change batch to X or set severity to High"}
 
-    RegexMatch -->|Yes (Form Modification)| ClientUpdate["Client-Side Action:\n1. Update formValues[field] = value\n2. Mark field in modifiedFields\n3. Visually highlight field in UI\n4. Append confirmation to Chat Log"]
+    RegexMatch -->|"Yes: Form Modification"| ClientUpdate["Client-Side Action:\n1. Update formValues[field] = value\n2. Mark field in modifiedFields\n3. Visually highlight field in UI\n4. Append confirmation to Chat Log"]
 
-    RegexMatch -->|No (Analytical Query)| BackendQuery["POST /api/v1/upload/chat\nPayload: {complaint_text, question}"]
+    RegexMatch -->|"No: Narrative Query"| BackendQuery["POST /api/v1/upload/chat\nPayload: {complaint_text, question}"]
 
     BackendQuery --> GroqCopilot["Groq LLM (openai/gpt-oss-120b)\nGrounded strictly in complaint narrative"]
 
@@ -402,8 +398,8 @@ erDiagram
         varchar duplicate_matched_id "ID of matching historical complaint"
         float duplicate_similarity "Cosine similarity score (0.0 to 1.0)"
         text duplicate_reasoning "Diagnostic explanation string"
-        timestamp_tz created_at "Creation timestamp (UTC)"
-        timestamp_tz updated_at "Update timestamp (UTC)"
+        timestamptz created_at "Creation timestamp (UTC)"
+        timestamptz updated_at "Update timestamp (UTC)"
     }
 ```
 
@@ -416,14 +412,15 @@ erDiagram
 | **Document-Extracted** | `quantity_affected`, `complaint_category`, `severity` | Extracted via Groq from narrative | Scope and nature of product defect |
 | **Document-Extracted** | `complainant_name`, `customer_organization`, `customer_contact`, `complaint_source` | Extracted via Groq from narrative | Incident reporter contact identity and origin |
 | **Document-Extracted** | `requested_action` | Extracted via Groq from narrative | Customer's requested resolution (quarantine, credit, replacement) |
-| **Temporal Incident** | `complaint_date` | Extracted via Groq from narrative | Date the incident occurred or was submitted by customer |
+| **Temporal Incident** | `complaint_date` | Extracted via Groq from narrative (defaults to intake date if omitted) | Date the incident occurred or was reported |
 | **AI-Derived Analytics**| `ai_summary` | Generated by Groq in Node 2 | Concise 2–3 sentence executive summary |
 | **AI-Derived Analytics**| `ai_risk_level`, `priority` | Mapped in Nodes 3 & 4 | Risk triage categorization and operational priority |
 | **Duplicate Audit** | `is_duplicate`, `duplicate_matched_id`, `duplicate_similarity`, `duplicate_reasoning` | Calculated in Node 5 by `DuplicateService` | Audit trail linking potential duplicate incidents |
 | **Ledger System Control**| `id` | `uuid.uuid4()` | Practically unique internal primary key |
 | **Ledger System Control**| `complaint_id` | `ComplaintService.generate_complaint_id()` | Sequential human-readable business ID (`CMP-YYYYMMDD-XXXX`) |
-| **Ledger System Control**| `status` | System lifecycle | `Pending` on intake, `Reviewed` on human verification |
-| **Ledger System Control**| `created_at`, `updated_at` | Database server timestamp (UTC) | Immutable audit trail timestamps |
+| **Ledger System Control**| `status` | System lifecycle | `Pending` on intake (or `Duplicate`), `Reviewed` on human verification |
+| **Ledger System Control**| `created_at` | Database server timestamp (UTC) | Record creation timestamp |
+| **Ledger System Control**| `updated_at` | Database server timestamp (UTC) | Record mutation timestamp (`onupdate=datetime.now(UTC)`) |
 
 ---
 
@@ -438,113 +435,104 @@ Verified against [package.json](frontend/package.json) and [requirements.txt](ba
 | **State** | Redux Toolkit | `2.12.0` | Global state for dashboard registry and KPI metrics |
 | **Styling** | Tailwind CSS | `4.3.3` | Utility-first styling framework |
 | **Routing** | React Router DOM | `7.18.1` | Client-side routing (`/`, `/complaint`, `/dashboard`, `/complaint/:id`) |
-| **HTTP** | Axios | `1.18.1` | HTTP client configured with `/api` proxy |
-| **Backend** | Python | `3.13.7` (3.11+) | Core runtime environment |
-| **Framework** | FastAPI | `0.139.2` | Asynchronous REST API framework |
-| **ASGI Server**| Uvicorn | `0.51.0` | ASGI application server |
-| **ORM** | SQLAlchemy | `2.0.51` | Object-Relational Mapping and session management |
-| **Validation** | Pydantic | `2.13.4` | Request and response schema validation |
-| **Migrations** | Alembic | `1.18.5` | Version-controlled database schema management |
-| **Database** | PostgreSQL | `17` | Relational database (configured on port `5433`) |
-| **AI Graph** | LangGraph | `1.2.9` | Stateful 5-node directed graph pipeline |
+| **HTTP Client** | Axios | `1.13.6` | Asynchronous REST communication with backend |
+| **Icons** | Lucide React | `1.16.0` | Production UI iconography |
+| **Backend** | Python | `3.13.7` / `3.11+` | Core server runtime environment |
+| **API Framework** | FastAPI | `0.139.2` | High-performance asynchronous REST API framework |
+| **ASGI Server** | Uvicorn | `0.44.0` | Standard ASGI web server implementation |
+| **Database** | PostgreSQL | `17` | Relational storage for complaint ledger records |
+| **ORM** | SQLAlchemy | `2.0.48` | Declarative relational database mapping |
+| **Migrations** | Alembic | `1.18.4` | Relational schema versioning and migration runner |
+| **Workflow Graph**| LangGraph | `1.2.9` | 5-node linear orchestration state graph |
 | **LLM Client** | Groq SDK | `1.5.0` | High-throughput inference for `openai/gpt-oss-120b` |
-| **Vectors** | Sentence-Transformers| `5.6.0` | 384-dimensional vector encoding (`all-MiniLM-L6-v2`) |
-| **ML Math** | Scikit-Learn | `1.9.0` | Cosine similarity matrix operations |
-| **Parsing** | PyPDF / docx / msg | `6.14.2` / `1.2.0` / `0.56.0` | Text extraction from `.pdf`, `.docx`, and `.msg` files |
+| **Embeddings** | Sentence-Transformers | `5.3.0` | Dense vector embedding model (`all-MiniLM-L6-v2`) |
+| **Vector Math** | Scikit-Learn | `1.8.0` | Cosine similarity calculations |
+| **Document Parsers**| PyPDF, python-docx, extract-msg | Modern | Multi-format text extraction (.pdf, .docx, .msg) |
 
 ---
 
 ## 10. API Documentation
 
-Interactive documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI) and [http://localhost:8000/redoc](http://localhost:8000/redoc).
-
 ### Registered REST Endpoints
 
-| Method | Path | Request Payload | Response Model | Description |
+| Method | Path | Request Body | Response Model | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **GET** | `/health` | *None* | `{"status": str, "service": str}` | System health check probe |
-| **GET** | `/` | *None* | `{"message": str, "version": str}` | Root service metadata |
-| **POST** | `/api/v1/upload/process` | `multipart/form-data` (`file`) | `dict` (Intake Response) | Ingests `.pdf`, `.docx`, or `.msg`, runs triage pipeline |
-| **POST** | `/api/v1/upload/text` | `{"text": str}` | `dict` (Intake Response) | Ingests plain text complaint narratives |
-| **POST** | `/api/v1/upload/chat` | `{"complaint_text": str, "question": str}` | `{"answer": str}` | Conversational QA Copilot response |
-| **GET** | `/api/v1/complaints` | *None* | `List[ComplaintResponse]` | Retrieves all complaints from PostgreSQL ledger |
-| **POST** | `/api/v1/complaints` | `ComplaintCreate` | `ComplaintResponse` (201) | Directly registers a complaint record |
-| **GET** | `/api/v1/complaints/{id}` | Path `id` (UUID) | `ComplaintResponse` | Retrieves single complaint detail by UUID |
-| **PATCH**| `/api/v1/complaints/{id}` | `ComplaintUpdate` | `ComplaintResponse` | Updates fields or transitions status (`Pending` -> `Reviewed`) |
-| **DELETE**| `/api/v1/complaints/{id}`| Path `id` (UUID) | `{"success": true, ...}` | Deletes a complaint record from database |
+| **GET** | `/health` | *None* | `HealthResponse` | Liveness probe verifying API and system state |
+| **POST** | `/api/v1/upload/process` | `multipart/form-data` (`file`) | `AIProcessingResponse` | Uploads binary document, classifies, extracts 14 fields, and checks duplicates |
+| **POST** | `/api/v1/upload/text` | `DirectTextInput` (`text`) | `AIProcessingResponse` | Directly ingests raw text, bypassing file upload |
+| **POST** | `/api/v1/upload/chat` | `ChatInput` (`complaint_text`, `question`) | `ChatResponse` | Grounded narrative Q&A using Groq LLM |
+| **POST** | `/api/v1/complaints` | `ComplaintCreate` | `ComplaintResponse` (201) | Directly registers a structured complaint record |
+| **GET** | `/api/v1/complaints` | Query params (`skip`, `limit`, `status`, `search`) | `List[ComplaintResponse]` | Retrieves paginated and filtered list of complaints |
+| **GET** | `/api/v1/complaints/{id}` | Path param (`id` or `complaint_id`) | `ComplaintResponse` | Retrieves single complaint by UUID or business ID |
+| **PATCH** | `/api/v1/complaints/{id}` | `ComplaintUpdate` | `ComplaintResponse` | Updates fields or transitions status (e.g., to `Reviewed`) |
+| **DELETE**| `/api/v1/complaints/{id}` | Path param (`id` or `complaint_id`) | `{"detail": "..."}` | Removes a complaint record from the database |
 
 ---
 
 ## 11. Repository Structure
 
-```
+```text
 ai-powered-complaint-management/
 ├── backend/
+│   ├── alembic.ini                     # Database migration configuration
+│   ├── requirements.txt                # Python backend dependencies
+│   ├── migrations/
+│   │   ├── env.py                      # Dynamic database URL resolution
+│   │   └── versions/                   # Migration versions (e.g., 001_initial_complaints.py)
 │   ├── app/
-│   │   ├── ai/
-│   │   │   ├── complaint_extractor.py     # 14-field extraction schema and prompt
-│   │   │   ├── document_classifier.py     # Binary relevance gatekeeper
-│   │   │   ├── embedding_service.py       # SentenceTransformer all-MiniLM-L6-v2 wrapper
-│   │   │   └── workflow.py                # 5-node LangGraph StateGraph pipeline
-│   │   ├── api/
-│   │   │   ├── complaints.py              # Ledger CRUD endpoints
-│   │   │   ├── health.py                  # Health check route
-│   │   │   └── upload.py                  # /process, /text, and /chat endpoints
+│   │   ├── main.py                     # FastAPI application factory and router registration
 │   │   ├── core/
-│   │   │   └── config.py                  # Pydantic BaseSettings environment config
-│   │   ├── database/
-│   │   │   └── database.py                # SQLAlchemy engine & sessionmaker
+│   │   │   ├── config.py               # Robust .env discovery and Pydantic settings
+│   │   │   └── database.py             # SQLAlchemy engine and session dependency
 │   │   ├── models/
-│   │   │   └── complaint.py               # SQLAlchemy ORM model (complaints table)
+│   │   │   └── complaint.py            # Declarative SQLAlchemy models (Complaint)
 │   │   ├── schemas/
-│   │   │   └── complaint.py               # Pydantic Create, Update, Response schemas
-│   │   ├── services/
-│   │   │   ├── ai_processing_service.py   # LangGraph execution coordinator
-│   │   │   ├── complaint_service.py       # Sequential ID generation & DB service
-│   │   │   ├── duplicate_service.py       # Multi-representation similarity engine
-│   │   │   ├── parser_service.py          # PDF, DOCX, and MSG extractors
-│   │   │   └── upload_service.py          # File storage & extension validation
-│   │   ├── uploads/                       # Local disk storage for uploaded files
-│   │   └── main.py                        # FastAPI entrypoint and CORS middleware
-│   ├── migrations/                        # Alembic migration revisions & env.py
-│   ├── tests/
-│   │   └── test_duplicate_service.py      # Unit test suite for duplicate detection
-│   ├── alembic.ini                        # Alembic config
-│   ├── requirements.txt                   # UTF-8 encoded backend dependencies
-│   └── .env.example                       # Sanitized environment template
-│
-├── frontend/
-│   ├── src/
+│   │   │   ├── complaint.py            # Pydantic schemas (ComplaintCreate, Response)
+│   │   │   └── upload.py               # Schemas for direct text and chat endpoints
 │   │   ├── api/
-│   │   │   ├── apiClient.js               # Central Axios instance (/api base)
-│   │   │   ├── complaintApi.js            # Ledger CRUD API calls
-│   │   │   └── uploadApi.js               # Upload, text, and chat API calls
-│   │   ├── components/
-│   │   │   ├── common/                    # Navbar, Sidebar, Card, Button, Loaders
-│   │   │   └── complaint/
-│   │   │       ├── DuplicateCard.jsx      # Duplicate warning comparison display
-│   │   │       ├── WorkspaceCopilot.jsx   # Right panel Copilot chat and intake
-│   │   │       └── WorkspaceForm.jsx      # Left panel 14-field editable QMS form
-│   │   ├── hooks/
-│   │   │   └── useUpload.js               # Upload lifecycle management hook
+│   │   │   ├── router.py               # Consolidated v1 APIRouter
+│   │   │   └── v1/
+│   │   │       ├── upload.py           # Document upload, text ingestion, and chat endpoints
+│   │   │       └── complaints.py       # Complaint CRUD endpoints
+│   │   ├── services/
+│   │   │   ├── upload_service.py       # File extension validation and sanitized disk write
+│   │   │   ├── parser_service.py       # Text extraction (.pdf, .docx, .msg)
+│   │   │   ├── duplicate_service.py    # Multi-representation semantic duplicate detection
+│   │   │   ├── embedding_service.py    # In-memory sentence-transformers embedding helper
+│   │   │   └── complaint_service.py    # Business ID generation (CMP-YYYYMMDD-XXXX) and queries
+│   │   ├── ai/
+│   │   │   ├── classifier.py           # Relevance gatekeeper using Groq
+│   │   │   ├── extractor.py            # 14-field structured extraction via Groq JSON mode
+│   │   │   └── workflow.py             # 5-node LangGraph linear StateGraph workflow
+│   │   └── uploads/
+│   │       └── .gitkeep                # Local document storage directory (binaries gitignored)
+│   └── tests/
+│       ├── test_duplicate_service.py   # Isolated unit tests for duplicate detection logic
+│       └── test_regression.py          # Regression test suite
+├── frontend/
+│   ├── package.json                    # Node dependencies and build scripts
+│   ├── vite.config.js                  # Vite bundler configuration and /api proxy
+│   ├── tailwind.config.js              # Tailwind CSS styling configuration
+│   ├── src/
+│   │   ├── main.jsx                    # Application entry point with Redux Provider
+│   │   ├── App.jsx                     # Root router configuration
+│   │   ├── store/
+│   │   │   ├── index.js                # Redux Toolkit store setup
+│   │   │   └── complaintSlice.js       # Global state for dashboard registry
 │   │   ├── pages/
-│   │   │   ├── Complaint.jsx              # Two-panel intake workspace
-│   │   │   ├── ComplaintDetails.jsx       # Case audit and detail view
-│   │   │   ├── Dashboard.jsx              # Operational metrics & search table
-│   │   │   └── Home.jsx                   # Public overview landing page
-│   │   ├── routes/
-│   │   │   └── AppRoutes.jsx              # React Router definitions
-│   │   ├── utils/
-│   │   │   └── conversationalParser.js    # Client-side intent parser for form edits
-│   │   ├── App.jsx                        # Layout container
-│   │   └── main.jsx                       # React DOM entrypoint
-│   ├── package.json                       # Frontend dependencies and scripts
-│   └── vite.config.js                     # Vite build config with /api proxy
-│
+│   │   │   ├── Home.jsx                # Landing page with workflow introduction
+│   │   │   ├── Complaint.jsx           # Two-panel intake workspace (form + Copilot)
+│   │   │   └── Dashboard.jsx           # Operational dashboard with KPI cards and registry table
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx              # Navigation header
+│   │   │   ├── Footer.jsx              # Application footer
+│   │   │   └── CaseDrawer.jsx          # Detailed slide-out audit inspector
+│   │   └── utils/
+│   │       └── conversationalParser.js # Client-side regex command parser for Copilot
 ├── docs/
-│   └── images/                            # Application screenshots
-├── requirements.txt                       # Root requirements mirroring backend
-└── README.md                              # Project documentation
+│   └── images/                         # Application screenshots for documentation
+├── .gitignore                          # Excludes .venv, node_modules, .env, and uploads/*
+└── README.md                           # Comprehensive documentation
 ```
 
 ---
@@ -552,12 +540,10 @@ ai-powered-complaint-management/
 ## 12. Local Setup & Execution Guide
 
 ### Prerequisites
-* **Python**: `3.13.7` (or `3.11+`).
-* **Node.js**: `20.19+` or `22.12+` (tested on Node `v24.11.1`).
-* **PostgreSQL**: Version 15+ (tested on PostgreSQL 17).
-* **Groq API Key**: Free key from [console.groq.com](https://console.groq.com).
-
----
+* **Python**: `3.13.7` or `3.11+`
+* **Node.js**: `20.19+` or `22.12+` (tested on Node `v24.11.1`)
+* **PostgreSQL**: Version 17 installed and running (configured for port `5433` or standard `5432`)
+* **Groq Cloud API Key**: Active API key from [Groq Console](https://console.groq.com)
 
 ### Step 1: Clone Repository
 ```powershell
@@ -565,44 +551,28 @@ git clone https://github.com/Sumeet2005/ai-pharmaceutical-complaint-system.git
 cd ai-pharmaceutical-complaint-system
 ```
 
----
-
 ### Step 2: Configure Environment Variables
-Copy the template to create `backend/.env`:
-```powershell
-copy backend\.env.example backend\.env
-```
-
-Configure `backend/.env` with your local credentials:
-```env
-APP_NAME="AI Pharmaceutical Complaint System"
-APP_ENV=development
-DEBUG=True
-
-# Adjust host, port (default 5432 or custom 5433), username, and password
-DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@localhost:5433/pharma_complaints
+Create `backend/.env` based on `backend/.env.example`:
+```ini
+# PostgreSQL Connection URL
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/pharma_complaints
 
 # Groq Cloud API Key and active model
-GROQ_API_KEY=<YOUR_GROQ_API_KEY>
+GROQ_API_KEY=your_actual_groq_api_key_here
 GROQ_MODEL=openai/gpt-oss-120b
 
 # CORS configuration
-CORS_ORIGINS=http://localhost:5173
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
----
-
 ### Step 3: Create PostgreSQL Database
-Using PostgreSQL CLI (`psql` or `createdb`):
 ```powershell
 # Using createdb (adjust port if running on 5432 or 5433)
-createdb -U postgres -p 5433 pharma_complaints
+createdb -h localhost -p 5433 -U postgres pharma_complaints
 
 # Or inside psql:
 # CREATE DATABASE pharma_complaints;
 ```
-
----
 
 ### Step 4: Python Virtual Environment & Migrations
 ```powershell
@@ -619,45 +589,41 @@ alembic upgrade head
 cd ..
 ```
 
----
-
 ### Step 5: Start FastAPI Backend
 ```powershell
 # From repository root
-.venv\Scripts\uvicorn.exe app.main:app --app-dir backend --port 8000 --reload
+.venv\Scripts\uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-Check health at: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-
----
+*Health Check*: Verify at `http://127.0.0.1:8000/health` (returns `{"status": "healthy"}`).
 
 ### Step 6: Start Frontend Client
-Open a second PowerShell terminal:
+In a separate terminal:
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+*Access Application*: Open `http://localhost:5173` in your browser.
 
 ---
 
-## 13. Manual Testing & Interview Walkthrough
+## 13. Manual Testing & Verification Guide
 
 1. **Access Workspace (`/complaint`)**: Open the browser and navigate to the intake page.
-2. **Upload a Complaint Document**: Upload a pharmaceutical complaint PDF.
+2. **Ingest a Complaint Document**: Upload a pharmaceutical complaint PDF.
    * *Observation*: The progress indicator activates, followed by form population with 14 extracted fields.
    * *Observation*: The record is initially persisted in PostgreSQL with `Pending` status.
-3. **Upload Non-Complaint (Negative Path)**: Upload a general invoice or resume.
+3. **Upload Non-Complaint (Negative Path Validation)**: Upload a general invoice or resume.
    * *Observation*: The gatekeeper classifies the document as non-compliant, halts processing, and displays a rejection card.
-4. **Interact with Copilot**: In the right panel, ask: *"What packaging defects were noted?"*
+4. **Verify Copilot Narrative Q&A**: In the right panel, ask: *"What packaging defects were noted?"*
    * *Observation*: The Copilot answers using the source narrative context.
-5. **Natural Language Form Edit**: Type: *"change batch number to DEMO-2026-999"*.
+5. **Test Natural Language Form Modification**: Type: *"change batch number to DEMO-2026-999"*.
    * *Observation*: `conversationalParser.js` updates the Batch Number field and highlights it in amber.
-6. **Commit to Ledger**: Click **Commit to Ledger** and confirm.
+6. **Commit Record to Ledger**: Click **Commit to Ledger** and confirm.
    * *Observation*: `PATCH /api/v1/complaints/{id}` updates the record to `Reviewed` status and redirects to the Dashboard.
-7. **Demonstrate Duplicate Detection**: Upload a second document sharing the same product and batch number.
+7. **Verify Semantic Duplicate Detection**: Upload a second document sharing the same product and batch number.
    * *Observation*: The engine scores the dual representations, flags the document as a potential duplicate, and renders a comparison card showing the matched complaint ID.
-8. **Dashboard Inspection (`/dashboard`)**: Use the search input to filter records by product or batch. Click a row to open the full case audit view.
+8. **Verify Operations Dashboard (`/dashboard`)**: Use the search input to filter records by product or batch. Click a row to open the full case audit view.
 
 ---
 
@@ -668,14 +634,14 @@ Verifies 7 edge cases (batch match thresholding, summary fallbacks, cross-batch 
 ```powershell
 .venv\Scripts\python.exe backend/tests/test_duplicate_service.py
 ```
-**Output**: `Ran 7 tests in 0.039s - OK`
+**Output**: `Ran 7 tests in ... - OK`
 
 ### 2. Frontend Production Build
 ```powershell
 cd frontend
 npm run build
 ```
-**Output**: `✓ built in 475ms` (`dist/assets/index-BHctHbVD.js` gzip: 123.61 kB).
+**Output**: `✓ built in ...` (`dist/assets/index-*.js` gzip: ~124 kB).
 
 ---
 
@@ -695,28 +661,6 @@ npm run build
 * [ ] **Cloud Storage**: Transition from local disk to encrypted Amazon S3 buckets.
 * [ ] **OCR Ingestion**: Multimodal OCR pipeline for scanned paper forms.
 * [ ] **Asynchronous Workers**: Offload document parsing to Celery / Redis task queues.
-
----
-
-## 16. Technical Interview Cheatsheet
-
-### 60-Second Elevator Pitch
-> *"PharmacoGuard is an AI-powered QMS Ingestion Workspace that streamlines pharmaceutical quality complaint intake. When unstructured documents arrive as PDFs or emails, it validates document relevance, extracts 14 standardized QMS fields using a 5-node LangGraph workflow on Groq, and flags potential duplicates using dual-representation sentence embeddings. Extracted records are displayed in an interactive two-panel React 19 workspace where QA officers can converse with an AI Copilot, edit fields with natural language commands, and verify data before committing the record to a PostgreSQL ledger."*
-
-### Architecture in 30 Seconds
-> *"The frontend is built with React 19, Vite 8, and Tailwind CSS 4, using Redux Toolkit for dashboard data and local state for intake forms. The backend uses FastAPI and SQLAlchemy 2.0 connected to PostgreSQL 17 with Alembic migrations. AI tasks are split: Groq (`openai/gpt-oss-120b`) handles document classification, 14-field extraction, and Copilot Q&A, while a local SentenceTransformer (`all-MiniLM-L6-v2`) computes 384-dimensional embeddings for duplicate detection."*
-
-### Explaining the 5 LangGraph Nodes
-> *"We use LangGraph for structured, auditable triage execution:*
-> 1. **Extract Fields**: *Extracts 14 schema entities via Groq in JSON mode.*
-> 2. **Map Summary**: *Isolates the 2-3 sentence executive summary.*
-> 3. **Classify Risk**: *Standardizes incident severity into Critical, High, Medium, or Low.*
-> 4. **Determine Priority**: *Maps triage priority based on safety and operational response windows.*
-> 5. **Duplicate Check**: *Executes dual-representation similarity scoring against database records.*
-> *This structure provides clear state transitions, error isolation, and testability."*
-
-### Explaining Duplicate Detection
-> *"We implement a multi-representation semantic engine. Because LLM extraction lengths can vary, we embed both the narrative text and the standardized AI summary, selecting the maximum cosine similarity. We dynamically apply a 70% threshold when product and batch match, and an 85% threshold otherwise, flagging potential duplicates for human verification."*
 
 ---
 
